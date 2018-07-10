@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import requests
 import time
-import datetime
+from datetime import datetime
 import json
 import base64
 import uuid
@@ -217,6 +217,16 @@ class BitMEX(object):
         }
         return self._curl_bitmex(path=path, postdict=postdict, verb="POST", max_retries=0)
 
+    @authentication_required
+    def bucketed_quotes(self, binsize, count, start):
+        postdict = {
+            'binSize': binsize,
+            'count': count,
+            'symbol': self.symbol,
+            'startTime': start.strftime("%Y-%m-%d %H:%M")
+        }
+        return self._curl_bitmex(path='quote/bucketed', postdict=postdict, verb="GET")
+
     def _curl_bitmex(self, path, query=None, postdict=None, timeout=None, verb=None, rethrow_errors=False,
                      max_retries=None):
         """Send a request to BitMEX Servers."""
@@ -293,7 +303,7 @@ class BitMEX(object):
                 # Figure out how long we need to wait.
                 ratelimit_reset = response.headers['X-Ratelimit-Reset']
                 to_sleep = int(ratelimit_reset) - int(time.time())
-                reset_str = datetime.datetime.fromtimestamp(int(ratelimit_reset)).strftime('%X')
+                reset_str = datetime.fromtimestamp(int(ratelimit_reset)).strftime('%X')
 
                 # We're ratelimited, and we may be waiting for a long time. Cancel orders.
                 self.logger.warning("Canceling all known orders in the meantime.")

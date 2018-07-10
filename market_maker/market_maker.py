@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from time import sleep
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from os.path import getmtime
 import random
 import requests
@@ -16,6 +16,7 @@ from market_maker.utils import log, constants, errors, math
 import os
 watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
 
+import numpy
 
 #
 # Helpers
@@ -197,6 +198,9 @@ class ExchangeInterface:
             return orders
         return self.bitmex.cancel([order['orderID'] for order in orders])
 
+    def get_quotes(self, binsize, count, start):
+        return self.bitmex.bucketed_quotes(binsize, count, start)
+
 
 class OrderManager:
     def __init__(self):
@@ -214,6 +218,7 @@ class OrderManager:
         else:
             logger.info("Order Manager initializing, connecting to BitMEX. Live run: executing real trades.")
 
+        self.ticks = []
         self.start_time = datetime.now()
         self.instrument = self.exchange.get_instrument()
         self.starting_qty = self.exchange.get_delta()
@@ -221,6 +226,7 @@ class OrderManager:
         self.reset()
 
     def reset(self):
+        self.history = []
         self.exchange.cancel_all_orders()
         self.sanity_check()
         self.print_status()
@@ -228,8 +234,27 @@ class OrderManager:
         # Create orders and converge.
         self.place_orders()
 
-        if settings.DRY_RUN:
-            sys.exit()
+        # if settings.DRY_RUN:
+        #     sys.exit()
+
+    def analyze_history(self):
+        quote_count = 50
+        short_average = self.moving_average(steps=quote_count, start=datetime.now())
+        long_average = self.moving_average(steps=quote_count, start=datetime.now(), stepsize=timedelta(hours=1), binsize='1h')
+        data_point = {
+            'short_mean': short_average,
+            'long_mean': long_average
+        }
+        self.history.append(data_point)
+
+
+    def moving_average(self, start, steps=50, stepsize=timedelta(minutes=1), binsize='1m'):
+        start_dt = start - steps * stepsize
+        history = self.exchange.get_quotes(binsize=binsize, count=steps, start=start_dt)
+        prices = []
+        for order in history:
+            prices.append(order['bidPrice'])
+        return numpy.mean(prices)
 
     def print_status(self):
         """Print the current MM status."""
@@ -283,6 +308,8 @@ class OrderManager:
         logger.info('Start Positions: Buy: %.*f, Sell: %.*f, Mid: %.*f' %
                     (tickLog, self.start_position_buy, tickLog, self.start_position_sell,
                      tickLog, self.start_position_mid))
+        self.ticks.append(self.start_position_mid)
+        self.analyze_history()
         return ticker
 
     def get_price_offset(self, index):
@@ -320,11 +347,15 @@ class OrderManager:
         # then we match orders from the outside in, ensuring the fewest number of orders are amended and only
         # a new order is created in the inside. If we did it inside-out, all orders would be amended
         # down and a new order would be created at the outside.
-        for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
-            if not self.long_position_limit_exceeded():
-                buy_orders.append(self.prepare_order(-i))
-            if not self.short_position_limit_exceeded():
-                sell_orders.append(self.prepare_order(i))
+        should_order = False
+        print(self.history)
+
+        if should_order:
+            for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
+                if not self.long_position_limit_exceeded():
+                    buy_orders.append(self.prepare_order(-i))
+                if not self.short_position_limit_exceeded():
+                    sell_orders.append(self.prepare_order(i))
 
         return self.converge_orders(buy_orders, sell_orders)
 
