@@ -16,7 +16,7 @@ from market_maker.utils import log, constants, errors, math
 import os
 watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
 
-import numpy
+import pandas
 
 #
 # Helpers
@@ -198,7 +198,7 @@ class ExchangeInterface:
             return orders
         return self.bitmex.cancel([order['orderID'] for order in orders])
 
-    def get_quotes(self, binsize, count, start):
+    def get_trades(self, binsize, count, start):
         return self.bitmex.bucketed_trades(binsize, count, start)
 
 
@@ -238,38 +238,57 @@ class OrderManager:
         #     sys.exit()
 
     def analyze_history(self):
-        quote_count = 50
         # determine time frequency (period) and associated times for calculating moving averages
+        end_time = datetime.now()
+        end_time = end_time - timedelta(seconds=end_time.second, microseconds=end_time.microsecond)
+        if settings.AGGRO is '1m':
+            # already rounded to the nearest 1m in the past since all settings need this
+            step_size = timedelta(minutes=1)
+        elif settings.AGGRO is '5m':
+            end_time = end_time - timedelta(minutes=(end_time.minute % 5))
+            step_size = timedelta(minutes=5)
+        elif settings.AGGRO is '1h':
+            end_time = end_time - timedelta(minutes=end_time.minute)
+            step_size = timedelta(hours=1)
+        elif settings.AGGRO is '1d':
+            end_time = end_time - timedelta(hours=end_time.hour, minutes=end_time.minute)
+            step_size = timedelta(days=1)
+        else:
+            raise Exception("AGGRO setting '%s' is invalid." % settings.AGGRO)
 
         # fast moving average - use exponential moving average over 20 periods
+        fma_prices = self.get_prices(end=end_time, steps=20, stepsize=step_size, binsize=settings.AGGRO)
 
         # medium moving average - use smooth moving avg over 50 periods
+        mma_prices = self.get_prices(end=end_time, steps=50, stepsize=step_size, binsize=settings.AGGRO)
 
         # trail moving average - use smooth moving avg over 200 periods
+        tma_prices = self.get_prices(end=end_time, steps=200, stepsize=step_size, binsize=settings.AGGRO)
+        print(fma_prices)
+        print(mma_prices)
+        print(tma_prices)
 
 
 
 
 
 
+        # short_average = self.moving_average(steps=quote_count, start=
+        # long_average = self.moving_average(steps=quote_count, start=datetime.now(), stepsize=timedelta(hours=1), binsize='1h')
+        # data_point = {
+        #     'short_mean': short_average,
+        #     'long_mean': long_average
+        # }
+        # self.history.append(data_point)
 
-        short_average = self.moving_average(steps=quote_count, start=datetime.now())
-        long_average = self.moving_average(steps=quote_count, start=datetime.now(), stepsize=timedelta(hours=1), binsize='1h')
-        data_point = {
-            'short_mean': short_average,
-            'long_mean': long_average
-        }
-        self.history.append(data_point)
 
-
-    def moving_average(self, start, steps=50, stepsize=timedelta(minutes=1), binsize='1m'):
-        start_dt = start - steps * stepsize
-        history = self.exchange.get_quotes(binsize=binsize, count=steps, start=start_dt)
-        # print(history)
+    def get_prices(self, end, steps, stepsize, binsize):
+        start_dt = end - steps * stepsize
+        history = self.exchange.get_trades(binsize=binsize, count=steps, start=start_dt)
         prices = []
-        for order in history:
-            prices.append(order['close'])
-        return numpy.mean(prices)
+        for trade in history:
+            prices.append(trade['close'])
+        return pandas.DataFrame(data=prices)
 
     def print_status(self):
         """Print the current MM status."""
