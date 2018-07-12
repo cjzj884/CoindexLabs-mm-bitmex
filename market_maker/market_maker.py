@@ -199,7 +199,7 @@ class ExchangeInterface:
         return self.bitmex.cancel([order['orderID'] for order in orders])
 
     def get_quotes(self, binsize, count, start):
-        return self.bitmex.bucketed_quotes(binsize, count, start)
+        return self.bitmex.bucketed_trades(binsize, count, start)
 
 
 class OrderManager:
@@ -239,6 +239,20 @@ class OrderManager:
 
     def analyze_history(self):
         quote_count = 50
+        # determine time frequency (period) and associated times for calculating moving averages
+
+        # fast moving average - use exponential moving average over 20 periods
+
+        # medium moving average - use smooth moving avg over 50 periods
+
+        # trail moving average - use smooth moving avg over 200 periods
+
+
+
+
+
+
+
         short_average = self.moving_average(steps=quote_count, start=datetime.now())
         long_average = self.moving_average(steps=quote_count, start=datetime.now(), stepsize=timedelta(hours=1), binsize='1h')
         data_point = {
@@ -251,9 +265,10 @@ class OrderManager:
     def moving_average(self, start, steps=50, stepsize=timedelta(minutes=1), binsize='1m'):
         start_dt = start - steps * stepsize
         history = self.exchange.get_quotes(binsize=binsize, count=steps, start=start_dt)
+        # print(history)
         prices = []
         for order in history:
-            prices.append(order['bidPrice'])
+            prices.append(order['close'])
         return numpy.mean(prices)
 
     def print_status(self):

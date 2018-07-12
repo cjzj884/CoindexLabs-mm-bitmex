@@ -7,3 +7,4 @@ def toNearest(num, tickSize):
        Use this after adding/subtracting/multiplying numbers."""
     tickDec = Decimal(str(tickSize))
     return float((Decimal(round(num / tickSize, 0)) * tickDec))
+

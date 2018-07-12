@@ -218,14 +218,14 @@ class BitMEX(object):
         return self._curl_bitmex(path=path, postdict=postdict, verb="POST", max_retries=0)
 
     @authentication_required
-    def bucketed_quotes(self, binsize, count, start):
+    def bucketed_trades(self, binsize, count, start):
         postdict = {
             'binSize': binsize,
             'count': count,
             'symbol': self.symbol,
             'startTime': start.strftime("%Y-%m-%d %H:%M")
         }
-        return self._curl_bitmex(path='quote/bucketed', postdict=postdict, verb="GET")
+        return self._curl_bitmex(path='trade/bucketed', postdict=postdict, verb="GET")
 
     def _curl_bitmex(self, path, query=None, postdict=None, timeout=None, verb=None, rethrow_errors=False,
                      max_retries=None):

@@ -45,7 +45,7 @@ MIN_SPREAD = 0.01
 
 # If True, market-maker will place orders just inside the existing spread and work the interval % outwards,
 # rather than starting in the middle and killing potentially profitable spreads.
-MAINTAIN_SPREADS = False # True
+MAINTAIN_SPREADS = True
 
 # This number defines far much the price of an existing order can be from a desired order before it is amended.
 # This is useful for avoiding unnecessary calls and maintaining your ratelimits.
@@ -119,3 +119,14 @@ WATCHED_FILES = [join('market_maker', 'market_maker.py'), join('market_maker', '
 
 # Specify the contracts that you hold. These will be used in portfolio calculations.
 CONTRACTS = ['XBTUSD']
+
+###############################################################################
+# Coindex settings
+###############################################################################
+
+# Aggression setting should be one of the BitMex supported time frequencies:
+# [1m,5m,1h,1d]
+AGGRO = "1m"
+
+# Bias sets the bot to play the short or long market. Options [Short,Long]
+BIAS = "Short"
