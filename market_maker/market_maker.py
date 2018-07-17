@@ -257,30 +257,23 @@ class OrderManager:
             raise Exception("AGGRO setting '%s' is invalid." % settings.AGGRO)
 
         # fast moving average - use exponential moving average over 20 periods
-        fma_prices = self.get_prices(end=end_time, steps=20, stepsize=step_size, binsize=settings.AGGRO)
+        fma_prices = self.get_prices(end=end_time, steps=21, stepsize=step_size, binsize=settings.AGGRO)
 
         # medium moving average - use smooth moving avg over 50 periods
-        mma_prices = self.get_prices(end=end_time, steps=50, stepsize=step_size, binsize=settings.AGGRO)
+        mma_prices = self.get_prices(end=end_time, steps=51, stepsize=step_size, binsize=settings.AGGRO)
 
         # trail moving average - use smooth moving avg over 200 periods
-        tma_prices = self.get_prices(end=end_time, steps=200, stepsize=step_size, binsize=settings.AGGRO)
+        tma_prices = self.get_prices(end=end_time, steps=201, stepsize=step_size, binsize=settings.AGGRO)
         print(fma_prices)
+        fma = fma_prices.ewm(com=9.5, min_periods=20).mean()
+        print(fma)
         print(mma_prices)
+        mma = mma_prices.rolling(50).mean()
+        print(mma)
         print(tma_prices)
-
-
-
-
-
-
-        # short_average = self.moving_average(steps=quote_count, start=
-        # long_average = self.moving_average(steps=quote_count, start=datetime.now(), stepsize=timedelta(hours=1), binsize='1h')
-        # data_point = {
-        #     'short_mean': short_average,
-        #     'long_mean': long_average
-        # }
-        # self.history.append(data_point)
-
+        tma = tma_prices.rolling(200).mean()
+        print(tma)
+        # print("FMACD: %f" % (fma[-2] - mma[-2]))
 
     def get_prices(self, end, steps, stepsize, binsize):
         start_dt = end - steps * stepsize
