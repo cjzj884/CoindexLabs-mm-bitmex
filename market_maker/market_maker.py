@@ -280,7 +280,7 @@ class OrderManager:
         logger.info("Timing -- Get prices: %s, Analysis: %s, Total: %s" % (api_calls_finished - begin_time, analysis_finished - api_calls_finished, analysis_finished - begin_time))
         logger.info("Moving averages --\nfma:\n%s\nmma:\n%s\ndiffs:\n%s\npos:\n%s\ncrossed: %s" % (fma, mma, last_steps_diff, last_steps_sign, crossed))
 
-        # return the direction in which the cross occurred
+        # return the direction in which the cross occurred or 0 if nada
         return 0 if not crossed else (-1 if not last_steps_sign[1] else 1)
 
     def get_prices(self, end, steps, binsize):
@@ -383,11 +383,11 @@ class OrderManager:
         # down and a new order would be created at the outside.
         cross = self.analyze_history()
         logger.info("Cross: %d" % cross)
-        if cross > 0:
+        if cross > 0 and settings.BIAS is "Long":
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.long_position_limit_exceeded():
                     buy_orders.append(self.prepare_order(-i))
-        elif cross < 0:
+        elif cross < 0 and settings.BIAS is "Short":
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.short_position_limit_exceeded():
                     sell_orders.append(self.prepare_order(i))
@@ -566,13 +566,20 @@ class OrderManager:
 
         sys.exit()
 
+    def seconds_until_next_check(self):
+        now = datetime.now()
+        next_run_time = math.snap_time(now, settings.AGGRO) + self.step_size + timedelta(milliseconds=500)
+        remaining = int((next_run_time - now).total_seconds())
+        print("Should run next at %s which is in %d seconds" % (next_run_time, remaining))
+        return remaining
+
     def run_loop(self):
         while True:
             sys.stdout.write("-----\n")
             sys.stdout.flush()
 
             self.check_file_change()
-            sleep(settings.LOOP_INTERVAL)
+            sleep(self.seconds_until_next_check())
 
             # This will restart on very short downtime, but if it's longer,
             # the MM will crash entirely as it is unable to connect to the WS on boot.
