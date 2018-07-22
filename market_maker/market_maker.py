@@ -566,12 +566,17 @@ class OrderManager:
 
         sys.exit()
 
-    def seconds_until_next_check(self):
+    def wait_until_next_check(self):
+        # determine the next time to run based on aggression setting
         now = datetime.now()
-        next_run_time = math.snap_time(now, settings.AGGRO) + self.step_size + timedelta(milliseconds=500)
+        next_run_time = math.snap_time(now + self.step_size, settings.AGGRO)
+        # find time remaining in whole seconds (int() rounds down)
         remaining = int((next_run_time - now).total_seconds())
-        print("Should run next at %s which is in %d seconds" % (next_run_time, remaining))
-        return remaining
+        logger.info("Should run next at %s which is in %d seconds" % (next_run_time, remaining))
+        # wait until almost time - there will be less than a second left
+        sleep(remaining)
+        # wait until we get to the exact time we need to run next
+        while datetime.now() <= next_run_time: pass
 
     def run_loop(self):
         while True:
@@ -579,7 +584,7 @@ class OrderManager:
             sys.stdout.flush()
 
             self.check_file_change()
-            sleep(self.seconds_until_next_check())
+            self.wait_until_next_check()
 
             # This will restart on very short downtime, but if it's longer,
             # the MM will crash entirely as it is unable to connect to the WS on boot.
