@@ -228,6 +228,7 @@ class OrderManager:
     def reset(self):
         self.history = []
         self.exchange.cancel_all_orders()
+        self.set_step_size()
         self.sanity_check()
         self.print_status()
 
@@ -237,56 +238,53 @@ class OrderManager:
         # if settings.DRY_RUN:
         #     sys.exit()
 
-    def analyze_history(self):
-        # determine time frequency (period) and associated times for calculating moving averages
-        begin_time = datetime.now()
-        end_time = begin_time - timedelta(seconds=begin_time.second, microseconds=begin_time.microsecond)
+    def set_step_size(self):
         if settings.AGGRO is '1m':
-            # already rounded to the nearest 1m in the past since all settings need this
-            step_size = timedelta(minutes=1)
+            self.step_size = timedelta(minutes=1)
         elif settings.AGGRO is '5m':
-            end_time = end_time - timedelta(minutes=(end_time.minute % 5))
-            step_size = timedelta(minutes=5)
+            self.step_size = timedelta(minutes=5)
         elif settings.AGGRO is '1h':
-            end_time = end_time - timedelta(minutes=end_time.minute)
-            step_size = timedelta(hours=1)
+            self.step_size = timedelta(hours=1)
         elif settings.AGGRO is '1d':
-            end_time = end_time - timedelta(hours=end_time.hour, minutes=end_time.minute)
-            step_size = timedelta(days=1)
+            self.step_size = timedelta(days=1)
         else:
             raise Exception("AGGRO setting '%s' is invalid." % settings.AGGRO)
 
+    def analyze_history(self):
+        # determine time frequency (period) and associated times for calculating moving averages
+        begin_time = datetime.now()
+        end_time = math.snap_time(begin_time, settings.AGGRO)
+
         # get price data for moving averages using the API
-        fma_prices = self.get_prices(end=end_time, steps=21, stepsize=step_size, binsize=settings.AGGRO)
-        mma_prices = self.get_prices(end=end_time, steps=51, stepsize=step_size, binsize=settings.AGGRO)
-        tma_prices = self.get_prices(end=end_time, steps=201, stepsize=step_size, binsize=settings.AGGRO)
+        fma_prices = self.get_prices(end=end_time, steps=settings.FMA_PERIODS+1, binsize=settings.AGGRO)
+        mma_prices = self.get_prices(end=end_time, steps=settings.MMA_PERIODS+1, binsize=settings.AGGRO)
+        # tma_prices = self.get_prices(end=end_time, steps=settings.TMA_PERIODS+1, binsize=settings.AGGRO)
         api_calls_finished = datetime.now()
 
         # fast moving average - use exponential moving average over 20 periods
-        fma = fma_prices.ewm(com=9.5, min_periods=20).mean()[-2:].reset_index(drop=True)
-
+        fma = fma_prices.ewm(com=(settings.FMA_PERIODS*2)/1, min_periods=settings.FMA_PERIODS).mean()[-2:].reset_index(drop=True)
         # medium moving average - use smooth moving avg over 50 periods
-        mma = mma_prices.rolling(50).mean()[-2:].reset_index(drop=True)
-
+        mma = mma_prices.rolling(settings.MMA_PERIODS).mean()[-2:].reset_index(drop=True)
         # trail moving average - use smooth moving avg over 200 periods
-        tma = tma_prices.rolling(200).mean()[-2:].reset_index(drop=True)
+        # tma = tma_prices.rolling(settings.TMA_PERIODS).mean()[-2:].reset_index(drop=True)
 
         # get the sign of the differences of the last two iterations
-        last_steps_diff = (fma - mma)
+        last_steps_diff = fma - mma
         last_steps_sign = last_steps_diff > 0
-        # import pdb; pdb.set_trace()
+
+        # determine if avgs have crossed by whether differences' signs have changed
         crossed = last_steps_sign[0] != last_steps_sign[1]
         analysis_finished = datetime.now()
-        print("Get prices: %s, Analysis: %s, Total: %s" %  (api_calls_finished - begin_time, analysis_finished - api_calls_finished, analysis_finished - begin_time))
-        print("fma:\n%s\nmma:\n%s\ndiffs:\n%s\npos:\n%s\ncrossed: %s" % (fma, mma, last_steps_diff, last_steps_sign, crossed))
-        # if the sign of the difference has changed from last step to this, we order
-        if crossed:
-            print("Moving averages crossed, let's make orders.")
-        else:
-            print("Moving averages haven't crossed, don't make any orders.")
 
-    def get_prices(self, end, steps, stepsize, binsize):
-        start_dt = end - steps * stepsize
+        # log some time analysis and status
+        logger.info("Timing -- Get prices: %s, Analysis: %s, Total: %s" % (api_calls_finished - begin_time, analysis_finished - api_calls_finished, analysis_finished - begin_time))
+        logger.info("Moving averages --\nfma:\n%s\nmma:\n%s\ndiffs:\n%s\npos:\n%s\ncrossed: %s" % (fma, mma, last_steps_diff, last_steps_sign, crossed))
+
+        # return the direction in which the cross occurred
+        return 0 if not crossed else (-1 if not last_steps_sign[1] else 1)
+
+    def get_prices(self, end, steps, binsize):
+        start_dt = end - steps * self.step_size
         history = self.exchange.get_trades(binsize=binsize, count=steps, start=start_dt)
         prices = []
         for trade in history:
@@ -346,7 +344,6 @@ class OrderManager:
                     (tickLog, self.start_position_buy, tickLog, self.start_position_sell,
                      tickLog, self.start_position_mid))
         self.ticks.append(self.start_position_mid)
-        self.analyze_history()
         return ticker
 
     def get_price_offset(self, index):
@@ -384,12 +381,14 @@ class OrderManager:
         # then we match orders from the outside in, ensuring the fewest number of orders are amended and only
         # a new order is created in the inside. If we did it inside-out, all orders would be amended
         # down and a new order would be created at the outside.
-        should_order = False
-
-        if should_order:
+        cross = self.analyze_history()
+        logger.info("Cross: %d" % cross)
+        if cross > 0:
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.long_position_limit_exceeded():
                     buy_orders.append(self.prepare_order(-i))
+        elif cross < 0:
+            for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.short_position_limit_exceeded():
                     sell_orders.append(self.prepare_order(i))
 
