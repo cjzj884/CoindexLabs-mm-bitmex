@@ -87,7 +87,7 @@ DRY_RUN = True
 # How often to re-check and replace orders.
 # Generally, it's safe to make this short because we're fetching from websockets. But if too many
 # order amend/replaces are done, you may hit a ratelimit. If so, email BitMEX if you feel you need a higher limit.
-LOOP_INTERVAL = 5
+LOOP_INTERVAL = 60
 
 # Wait times between orders / errors
 API_REST_INTERVAL = 1
@@ -126,7 +126,7 @@ CONTRACTS = ['XBTUSD']
 
 # Aggression setting should be one of the BitMex supported time frequencies:
 # [1m,5m,1h,1d]
-AGGRO = "5m"
+AGGRO = "1m"
 
 # Bias sets the bot to play the short or long market. Options [Short,Long]
 BIAS = "Short"

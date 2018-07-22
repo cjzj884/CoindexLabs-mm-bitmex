@@ -239,8 +239,8 @@ class OrderManager:
 
     def analyze_history(self):
         # determine time frequency (period) and associated times for calculating moving averages
-        end_time = datetime.now()
-        end_time = end_time - timedelta(seconds=end_time.second, microseconds=end_time.microsecond)
+        begin_time = datetime.now()
+        end_time = begin_time - timedelta(seconds=begin_time.second, microseconds=begin_time.microsecond)
         if settings.AGGRO is '1m':
             # already rounded to the nearest 1m in the past since all settings need this
             step_size = timedelta(minutes=1)
@@ -256,24 +256,34 @@ class OrderManager:
         else:
             raise Exception("AGGRO setting '%s' is invalid." % settings.AGGRO)
 
-        # fast moving average - use exponential moving average over 20 periods
+        # get price data for moving averages using the API
         fma_prices = self.get_prices(end=end_time, steps=21, stepsize=step_size, binsize=settings.AGGRO)
+        mma_prices = self.get_prices(end=end_time, steps=51, stepsize=step_size, binsize=settings.AGGRO)
+        tma_prices = self.get_prices(end=end_time, steps=201, stepsize=step_size, binsize=settings.AGGRO)
+        api_calls_finished = datetime.now()
+
+        # fast moving average - use exponential moving average over 20 periods
+        fma = fma_prices.ewm(com=9.5, min_periods=20).mean()[-2:].reset_index(drop=True)
 
         # medium moving average - use smooth moving avg over 50 periods
-        mma_prices = self.get_prices(end=end_time, steps=51, stepsize=step_size, binsize=settings.AGGRO)
+        mma = mma_prices.rolling(50).mean()[-2:].reset_index(drop=True)
 
         # trail moving average - use smooth moving avg over 200 periods
-        tma_prices = self.get_prices(end=end_time, steps=201, stepsize=step_size, binsize=settings.AGGRO)
-        print(fma_prices)
-        fma = fma_prices.ewm(com=9.5, min_periods=20).mean()
-        print(fma)
-        print(mma_prices)
-        mma = mma_prices.rolling(50).mean()
-        print(mma)
-        print(tma_prices)
-        tma = tma_prices.rolling(200).mean()
-        print(tma)
-        # print("FMACD: %f" % (fma[-2] - mma[-2]))
+        tma = tma_prices.rolling(200).mean()[-2:].reset_index(drop=True)
+
+        # get the sign of the differences of the last two iterations
+        last_steps_diff = (fma - mma)
+        last_steps_sign = last_steps_diff > 0
+        # import pdb; pdb.set_trace()
+        crossed = last_steps_sign[0] != last_steps_sign[1]
+        analysis_finished = datetime.now()
+        print("Get prices: %s, Analysis: %s, Total: %s" %  (api_calls_finished - begin_time, analysis_finished - api_calls_finished, analysis_finished - begin_time))
+        print("fma:\n%s\nmma:\n%s\ndiffs:\n%s\npos:\n%s\ncrossed: %s" % (fma, mma, last_steps_diff, last_steps_sign, crossed))
+        # if the sign of the difference has changed from last step to this, we order
+        if crossed:
+            print("Moving averages crossed, let's make orders.")
+        else:
+            print("Moving averages haven't crossed, don't make any orders.")
 
     def get_prices(self, end, steps, stepsize, binsize):
         start_dt = end - steps * stepsize
@@ -281,7 +291,7 @@ class OrderManager:
         prices = []
         for trade in history:
             prices.append(trade['close'])
-        return pandas.DataFrame(data=prices)
+        return pandas.Series(data=prices)
 
     def print_status(self):
         """Print the current MM status."""
@@ -375,7 +385,6 @@ class OrderManager:
         # a new order is created in the inside. If we did it inside-out, all orders would be amended
         # down and a new order would be created at the outside.
         should_order = False
-        print(self.history)
 
         if should_order:
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
