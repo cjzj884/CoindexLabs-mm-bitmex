@@ -239,6 +239,7 @@ class OrderManager:
         #     sys.exit()
 
     def set_step_size(self):
+        """Setup the step-size based on the Aggro setting."""
         if settings.AGGRO is '1m':
             self.step_size = timedelta(minutes=1)
         elif settings.AGGRO is '5m':
@@ -251,6 +252,8 @@ class OrderManager:
             raise Exception("AGGRO setting '%s' is invalid." % settings.AGGRO)
 
     def analyze_history(self):
+        """Using past close prices, calculate moving averages, and return whether they have crossed.
+        0 = didn't cross, 1 = fast has crossed above medium, -1 = fast has crossed below medium."""
         # determine time frequency (period) and associated times for calculating moving averages
         begin_time = datetime.now()
         end_time = math.snap_time(begin_time, settings.AGGRO)
@@ -284,6 +287,7 @@ class OrderManager:
         return 0 if not crossed else (-1 if not last_steps_sign[1] else 1)
 
     def get_prices(self, end, steps, binsize):
+        """Pull closing prices from the BitMex API in bulk."""
         start_dt = end - steps * self.step_size
         history = self.exchange.get_trades(binsize=binsize, count=steps, start=start_dt)
         prices = []
@@ -567,6 +571,7 @@ class OrderManager:
         sys.exit()
 
     def wait_until_next_check(self):
+        """Wait until the exact next time to run."""
         # determine the next time to run based on aggression setting
         now = datetime.now()
         next_run_time = math.snap_time(now + self.step_size, settings.AGGRO)
