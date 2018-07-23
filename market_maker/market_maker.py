@@ -256,22 +256,41 @@ class OrderManager:
     def analyze_history(self):
         """Using past close prices, calculate moving averages, and return whether they have crossed.
         0 = didn't cross, 1 = fast has crossed above medium, -1 = fast has crossed below medium."""
+        _key = lambda t, a: self.cache_key(t, "price-avg-" + a)
         # determine time frequency (period) and associated times for calculating moving averages
         begin_time = datetime.utcnow()
         end_time = math.snap_time(begin_time, settings.AGGRO)
 
-        # get price data for moving averages using the API
-        # tma_prices = self.get_prices(end=end_time, steps=settings.TMA_PERIODS+1, binsize=settings.AGGRO)
-        mma_prices = self.get_prices(end=end_time, steps=settings.MMA_PERIODS+1, binsize=settings.AGGRO)
-        fma_prices = self.get_prices(end=end_time, steps=settings.FMA_PERIODS+1, binsize=settings.AGGRO)
-        api_calls_finished = datetime.utcnow()
+        # get price data for moving averages
+        # tma_prices = self.get_prices(end=end_time, steps=settings.TMA_PERIODS, binsize=settings.AGGRO)
+        mma_prices = self.get_prices(end=end_time, steps=settings.MMA_PERIODS, binsize=settings.AGGRO)
+        fma_prices = self.get_prices(end=end_time, steps=settings.FMA_PERIODS, binsize=settings.AGGRO)
+        lookups_finished = datetime.utcnow()
 
+        # calculate the new values for the moving averages and commit to cache
+        new_avgs = {}
         # fast moving average - use exponential moving average over 20 periods
-        fma = fma_prices.ewm(com=(settings.FMA_PERIODS*2)/1, min_periods=settings.FMA_PERIODS).mean()[-2:].reset_index(drop=True)
+        fma = fma_prices.ewm(span=settings.FMA_PERIODS, min_periods=settings.FMA_PERIODS).mean()[-2:].reset_index(drop=True)
+        new_avgs[_key(end_time, 'fast')] = str(fma[1])
         # medium moving average - use smooth moving avg over 50 periods
         mma = mma_prices.rolling(settings.MMA_PERIODS).mean()[-2:].reset_index(drop=True)
+        new_avgs[_key(end_time, 'med')] = str(mma[1])
         # trail moving average - use smooth moving avg over 200 periods
         # tma = tma_prices.rolling(settings.TMA_PERIODS).mean()[-2:].reset_index(drop=True)
+        # new_avgs[_key(end_time, 'trail')] = str(tma[1])
+        self.memcache.set_many(new_avgs)
+
+        # try to get the past moving averages we want from the cache
+        last_time = end_time - self.step_size
+        avg_names = ['fast', 'med'] # 'trail'
+        averages = self.memcache.get_many([_key(last_time, avg) for avg in avg_names])
+        if _key(last_time, 'fast') not in averages:
+            logger.info("Don't have a previous value for averages, can't calculate yet.")
+            return 0
+        else:
+            fma[0] = averages[_key(last_time, 'fast')]
+            mma[0] = averages[_key(last_time, 'med')]
+            # tma[0] = averages[_key(last_time, 'trail')]
 
         # get the sign of the differences of the last two iterations
         last_steps_diff = fma - mma
@@ -282,7 +301,7 @@ class OrderManager:
         analysis_finished = datetime.utcnow()
 
         # log some time analysis and status
-        logger.info("Timing -- Get prices: %s, Analysis: %s, Total: %s" % (api_calls_finished - begin_time, analysis_finished - api_calls_finished, analysis_finished - begin_time))
+        logger.info("Timing -- Get prices: %s, Analysis: %s, Total: %s" % (lookups_finished - begin_time, analysis_finished - lookups_finished, analysis_finished - begin_time))
         logger.info("Moving averages --\nfma:\n%s\nmma:\n%s\ndiffs:\n%s\npos:\n%s\ncrossed: %s" % (fma, mma, last_steps_diff, last_steps_sign, crossed))
 
         # return the direction in which the cross occurred or 0 if nada
@@ -305,7 +324,7 @@ class OrderManager:
                 break
             prices[key] = float(prices[key])
             cache_hits += 1
-        logger.info("Got %d close prices from the cache." % cache_hits)
+        logger.info("Got %d close price(s) from the cache." % cache_hits)
         if cache_hits < steps:
             # get the remainder of the data from the API
             history = self.exchange.get_trades(binsize=binsize, count=(steps - cache_hits), start=start_dt)
@@ -318,7 +337,7 @@ class OrderManager:
                 float_prices[key] = float(trade['close'])
             # add these new prices to the cache
             self.memcache.set_many(new_prices)
-            print("Cached %d new prices" % (len(new_prices)))
+            logger.info("Cached %d new price(s)" % (len(new_prices)))
             # merge new prices with cache-hit prices
             prices = {**prices, **float_prices}
         # Should get back the right number of prices
@@ -333,7 +352,7 @@ class OrderManager:
         if type(t) == str:
             timestamp = t
         elif type(t) == datetime:
-            timestamp = t.strftime("%Y-%m-%dT%H:%M:%S.%fZ")[:-4] + "Z"
+            timestamp = t.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         else:
             raise Exception("The cache key time t must be a string or datetime.")
         key = "%s-%s" % (timestamp, datatype)
