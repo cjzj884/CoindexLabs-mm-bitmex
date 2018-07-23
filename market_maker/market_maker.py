@@ -7,6 +7,7 @@ import random
 import requests
 import atexit
 import signal
+from pymemcache.client.base import Client
 
 from market_maker import bitmex
 from market_maker.settings import settings
@@ -228,6 +229,7 @@ class OrderManager:
     def reset(self):
         self.history = []
         self.exchange.cancel_all_orders()
+        self.memcache = Client(('localhost', 11211))
         self.set_step_size()
         self.sanity_check()
         self.print_status()
@@ -255,14 +257,14 @@ class OrderManager:
         """Using past close prices, calculate moving averages, and return whether they have crossed.
         0 = didn't cross, 1 = fast has crossed above medium, -1 = fast has crossed below medium."""
         # determine time frequency (period) and associated times for calculating moving averages
-        begin_time = datetime.now()
+        begin_time = datetime.utcnow()
         end_time = math.snap_time(begin_time, settings.AGGRO)
 
         # get price data for moving averages using the API
-        fma_prices = self.get_prices(end=end_time, steps=settings.FMA_PERIODS+1, binsize=settings.AGGRO)
-        mma_prices = self.get_prices(end=end_time, steps=settings.MMA_PERIODS+1, binsize=settings.AGGRO)
         # tma_prices = self.get_prices(end=end_time, steps=settings.TMA_PERIODS+1, binsize=settings.AGGRO)
-        api_calls_finished = datetime.now()
+        mma_prices = self.get_prices(end=end_time, steps=settings.MMA_PERIODS+1, binsize=settings.AGGRO)
+        fma_prices = self.get_prices(end=end_time, steps=settings.FMA_PERIODS+1, binsize=settings.AGGRO)
+        api_calls_finished = datetime.utcnow()
 
         # fast moving average - use exponential moving average over 20 periods
         fma = fma_prices.ewm(com=(settings.FMA_PERIODS*2)/1, min_periods=settings.FMA_PERIODS).mean()[-2:].reset_index(drop=True)
@@ -277,7 +279,7 @@ class OrderManager:
 
         # determine if avgs have crossed by whether differences' signs have changed
         crossed = last_steps_sign[0] != last_steps_sign[1]
-        analysis_finished = datetime.now()
+        analysis_finished = datetime.utcnow()
 
         # log some time analysis and status
         logger.info("Timing -- Get prices: %s, Analysis: %s, Total: %s" % (api_calls_finished - begin_time, analysis_finished - api_calls_finished, analysis_finished - begin_time))
@@ -287,13 +289,55 @@ class OrderManager:
         return 0 if not crossed else (-1 if not last_steps_sign[1] else 1)
 
     def get_prices(self, end, steps, binsize):
-        """Pull closing prices from the BitMex API in bulk."""
+        """Pull closing prices from the BitMex API and/or memcached in bulk."""
+        _key = lambda t: self.cache_key(t, 'closeprice')
         start_dt = end - steps * self.step_size
-        history = self.exchange.get_trades(binsize=binsize, count=steps, start=start_dt)
-        prices = []
-        for trade in history:
-            prices.append(trade['close'])
-        return pandas.Series(data=prices)
+        # Create a list of all the prices which need to be gotten, then try to pull from cache
+        needed_price_times = [start_dt + (self.step_size * i) for i in range(steps)]
+        prices = self.memcache.get_many([_key(t) for t in needed_price_times])
+        # check for which price data came back from the cache
+        cache_hits = 0
+        for time in needed_price_times:
+            key = _key(time)
+            # at the point where we find a key missing, bail out so we can get the rest from the api
+            if key not in prices:
+                start_dt = time
+                break
+            prices[key] = float(prices[key])
+            cache_hits += 1
+        logger.info("Got %d close prices from the cache." % cache_hits)
+        if cache_hits < steps:
+            # get the remainder of the data from the API
+            history = self.exchange.get_trades(binsize=binsize, count=(steps - cache_hits), start=start_dt)
+            new_prices = {}
+            float_prices = {}
+            # prep new prices to add to the cache and to the set for analysis
+            for trade in history:
+                key = _key(trade['timestamp'])
+                new_prices[key] = str(trade['close'])
+                float_prices[key] = float(trade['close'])
+            # add these new prices to the cache
+            self.memcache.set_many(new_prices)
+            print("Cached %d new prices" % (len(new_prices)))
+            # merge new prices with cache-hit prices
+            prices = {**prices, **float_prices}
+        # Should get back the right number of prices
+        if len(prices) != steps:
+            raise Exception("Expected to find %d prices but got %d in %s" % (steps, len(prices), prices))
+        # Prices should not include None
+        if None in prices.values():
+            raise Exception("Got None for one of the prices in %s" % prices)
+        return pandas.Series(data=list(prices.values()))
+
+    def cache_key(self, t=datetime.utcnow(), datatype='price'):
+        if type(t) == str:
+            timestamp = t
+        elif type(t) == datetime:
+            timestamp = t.strftime("%Y-%m-%dT%H:%M:%S.%fZ")[:-4] + "Z"
+        else:
+            raise Exception("The cache key time t must be a string or datetime.")
+        key = "%s-%s" % (timestamp, datatype)
+        return key
 
     def print_status(self):
         """Print the current MM status."""
@@ -625,7 +669,7 @@ def margin(instrument, quantity, price):
 
 
 def run():
-    logger.info('BitMEX Market Maker Version: %s\n' % constants.VERSION)
+    logger.info('Coindex Market Maker version %s\n' % constants.VERSION)
 
     om = OrderManager()
     # Try/except just keeps ctrl-c from printing an ugly stacktrace
@@ -633,4 +677,5 @@ def run():
         om.init()
         om.run_loop()
     except (KeyboardInterrupt, SystemExit):
+        om.memcache.quit()
         sys.exit()

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 def toNearest(num, tickSize):
     """Given a number, round it to the nearest tick. Very useful for sussing float error
