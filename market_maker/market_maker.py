@@ -441,27 +441,31 @@ class OrderManager:
 
     def place_orders(self):
         """Create order items for use in convergence."""
+        cross = self.analyze_history()
+        logger.info("Cross: %d" % cross)
 
-        buy_orders = []
-        sell_orders = []
         # Create orders from the outside in. This is intentional - let's say the inner order gets taken;
         # then we match orders from the outside in, ensuring the fewest number of orders are amended and only
         # a new order is created in the inside. If we did it inside-out, all orders would be amended
         # down and a new order would be created at the outside.
-        cross = self.analyze_history()
-        logger.info("Cross: %d" % cross)
-        if cross > 0 and settings.BIAS is "Long":
+        buy_orders = []
+        sell_orders = []
+        if cross > 0:
+            # if the moving averages have crossed upward, create orders. If we're playing long open new Limit
+            # MarkPrice orders (the default). If not, then create Limit Close orders.
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.long_position_limit_exceeded():
-                    buy_orders.append(self.prepare_order(-i))
-        elif cross < 0 and settings.BIAS is "Short":
+                    buy_orders.append(self.prepare_order(-i, settings.BIAS == 'Short'))
+        elif cross < 0:
+            # if the moving averages have crossed downward, create orders. When playing short open new Limit
+            # MarkPrice orders (the default). Otherwise, create Limit Close orders.
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.short_position_limit_exceeded():
-                    sell_orders.append(self.prepare_order(i))
+                    sell_orders.append(self.prepare_order(i, settings.BIAS == 'Long'))
 
         return self.converge_orders(buy_orders, sell_orders)
 
-    def prepare_order(self, index):
+    def prepare_order(self, index, close=False):
         """Create an order object."""
 
         if settings.RANDOM_ORDER_SIZE is True:
@@ -470,8 +474,14 @@ class OrderManager:
             quantity = settings.ORDER_START_SIZE + ((abs(index) - 1) * settings.ORDER_STEP_SIZE)
 
         price = self.get_price_offset(index)
+        order = {
+            'price': price, 
+            'orderQty': quantity, 
+            'side': "Buy" if index < 0 else "Sell"
+        }
+        order['execInst'] = 'Close' if close
 
-        return {'price': price, 'orderQty': quantity, 'side': "Buy" if index < 0 else "Sell"}
+        return order
 
     def converge_orders(self, buy_orders, sell_orders):
         """Converge the orders we currently have in the book with what we want to be in the book.
