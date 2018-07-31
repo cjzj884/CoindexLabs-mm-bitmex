@@ -256,7 +256,7 @@ class OrderManager:
     def analyze_history(self):
         """Using past close prices, calculate moving averages, and return whether they have crossed.
         0 = didn't cross, 1 = fast has crossed above medium, -1 = fast has crossed below medium."""
-        _key = lambda t, a: self.cache_key(t, "price-avg-" + a)
+        _key = lambda t, a: self.cache_key(t, "price-avg-%s-%s" % (a, settings.AGGRO))
         # determine time frequency (period) and associated times for calculating moving averages
         begin_time = datetime.utcnow()
         end_time = math.snap_time(begin_time, settings.AGGRO)
@@ -309,7 +309,7 @@ class OrderManager:
 
     def get_prices(self, end, steps, binsize):
         """Pull closing prices from the BitMex API and/or memcached in bulk."""
-        _key = lambda t: self.cache_key(t, 'closeprice')
+        _key = lambda t: self.cache_key(t, 'closeprice' + settings.AGGRO)
         start_dt = end - steps * self.step_size
         # Create a list of all the prices which need to be gotten, then try to pull from cache
         needed_price_times = [start_dt + (self.step_size * i) for i in range(steps)]
@@ -348,7 +348,7 @@ class OrderManager:
             raise Exception("Got None for one of the prices in %s" % prices)
         return pandas.Series(data=list(prices.values()))
 
-    def cache_key(self, t=datetime.utcnow(), datatype='price'):
+    def cache_key(self, t=datetime.utcnow(), datatype='price' + settings.AGGRO):
         if type(t) == str:
             timestamp = t
         elif type(t) == datetime:
@@ -479,7 +479,8 @@ class OrderManager:
             'orderQty': quantity, 
             'side': "Buy" if index < 0 else "Sell"
         }
-        order['execInst'] = 'Close' if close
+        if close:
+            order['execInst'] = 'Close'
 
         return order
 

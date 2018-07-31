@@ -1,7 +1,6 @@
 # TODO
 
 ## Bot code base
-* Ensure that short and long behavior also closes orders instead of just open them
 * Calculate return on equity for open position and install safety nets for exiting at certain percentages
 * Persist data about open orders
 * Analyze past orders to show profitability

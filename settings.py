@@ -34,8 +34,8 @@ ORDER_PAIRS = 6
 # ORDER_START_SIZE will be the number of contracts submitted on level 1
 # Number of contracts from level 1 to ORDER_PAIRS - 1 will follow the function
 # [ORDER_START_SIZE + ORDER_STEP_SIZE (Level -1)]
-ORDER_START_SIZE = 1
-ORDER_STEP_SIZE = 1
+ORDER_START_SIZE = .0001
+ORDER_STEP_SIZE = .0001
 
 # Distance between successive orders, as a percentage (example: 0.005 for 0.5%)
 INTERVAL = 0.005
@@ -81,8 +81,8 @@ POST_ONLY = False
 ########################################################################################################################
 
 # If true, don't set up any orders, just say what we would do
-DRY_RUN = True
-# DRY_RUN = False
+# DRY_RUN = True
+DRY_RUN = False
 
 # How often to re-check and replace orders.
 # Generally, it's safe to make this short because we're fetching from websockets. But if too many
@@ -126,10 +126,10 @@ CONTRACTS = ['XBTUSD']
 
 # Aggression setting should be one of the BitMex supported time frequencies:
 # [1m,5m,1h,1d]
-AGGRO = "1m"
+AGGRO = "5m"
 
 # Bias sets the bot to play the short or long market. Options [Short,Long]
-BIAS = "Short"
+BIAS = "Long"
 
 # The number of periods to use for fast, medium, and trailing moving averages.
 FMA_PERIODS = 20
