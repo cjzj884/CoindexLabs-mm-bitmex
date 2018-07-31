@@ -463,7 +463,8 @@ class OrderManager:
                 if not self.short_position_limit_exceeded():
                     sell_orders.append(self.prepare_order(i, settings.BIAS == 'Long'))
 
-        return self.converge_orders(buy_orders, sell_orders)
+        if cross is not 0:
+            return self.converge_orders(buy_orders, sell_orders)
 
     def prepare_order(self, index, close=False):
         """Create an order object."""

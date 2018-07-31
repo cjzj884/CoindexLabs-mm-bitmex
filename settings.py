@@ -12,8 +12,8 @@ BASE_URL = "https://testnet.bitmex.com/api/v1/"
 # The BitMEX API requires permanent API keys. Go to https://testnet.bitmex.com/api/apiKeys to fill these out.
 
 # CG Testnet API key
-API_KEY = "gtaq8-sRnG0_0Z2aZ0yMNsaF"
-API_SECRET = "KSv39jk9SAe_LZ2wHcBw1RXjB5vaGM4YyfQzXWe5jzL9VrEd"
+API_KEY = "aWsN_fEaQarBt1M1RaqI52Wn"
+API_SECRET = "U7Fov3QgveSGIEAlyP1q7aek1AAb3J0O-iPXl6enrb_84DQ3"
 
 
 ########################################################################################################################
@@ -34,8 +34,8 @@ ORDER_PAIRS = 6
 # ORDER_START_SIZE will be the number of contracts submitted on level 1
 # Number of contracts from level 1 to ORDER_PAIRS - 1 will follow the function
 # [ORDER_START_SIZE + ORDER_STEP_SIZE (Level -1)]
-ORDER_START_SIZE = .0001
-ORDER_STEP_SIZE = .0001
+ORDER_START_SIZE = 10
+ORDER_STEP_SIZE = 10
 
 # Distance between successive orders, as a percentage (example: 0.005 for 0.5%)
 INTERVAL = 0.005

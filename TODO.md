@@ -2,7 +2,7 @@
 
 ## Bot code base
 * Calculate return on equity for open position and install safety nets for exiting at certain percentages
-* Persist data about open orders
+* Update a graph per iteration run showing the data it's using for analysis
 * Analyze past orders to show profitability
 * Persist settings so not dependent on config files
 * Web admin site for changing bot settings and viewing progress
