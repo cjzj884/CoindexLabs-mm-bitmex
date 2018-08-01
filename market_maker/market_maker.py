@@ -369,6 +369,7 @@ class OrderManager:
 
         logger.info("Current XBT Balance: %.6f" % XBt_to_XBT(self.start_XBt))
         logger.info("Current Contract Position: %d" % self.running_qty)
+        logger.info("Current Potential ROE: %f%" % self.potential_roe())
         if settings.CHECK_POSITION_LIMITS:
             logger.info("Position limits: %d/%d" % (settings.MIN_POSITION, settings.MAX_POSITION))
         if position['currentQty'] != 0:
@@ -452,19 +453,31 @@ class OrderManager:
         sell_orders = []
         if cross > 0:
             # if the moving averages have crossed upward, create orders. If we're playing long open new Limit
-            # MarkPrice orders (the default). If not, then create Limit Close orders.
+            # MarkPrice buy orders. If not, then create Limit Close sell orders.
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.long_position_limit_exceeded():
                     buy_orders.append(self.prepare_order(-i, settings.BIAS == 'Short'))
         elif cross < 0:
             # if the moving averages have crossed downward, create orders. When playing short open new Limit
-            # MarkPrice orders (the default). Otherwise, create Limit Close orders.
+            # MarkPrice sell orders. Otherwise, create Limit Close buy orders.
             for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                 if not self.short_position_limit_exceeded():
                     sell_orders.append(self.prepare_order(i, settings.BIAS == 'Long'))
 
         if cross is not 0:
             return self.converge_orders(buy_orders, sell_orders)
+
+        roe = self.potential_roe()
+        if roe <= settings.MIN_ROE:
+            # We have gone below our minimum ROE which means we need to cut our losses. Close open
+            # position at market price.
+            delta = self.exchange.get_delta()
+            index = delta / abs(delta)
+            order = self.prepare_order(index, close=True)
+            order['orderQty'] = delta
+            order['price'] = self.start_position_mid
+            logger.info("ROE %.2f%% dropped below minimum %.2f%%, time to bail out. order: %s" % (roe, settings.MIN_ROE, order))
+            self.exchange.create_bulk_orders([order])
 
     def prepare_order(self, index, close=False):
         """Create an order object."""
@@ -608,7 +621,7 @@ class OrderManager:
             logger.error("Sanity check failed, exchange data is inconsistent")
             self.exit()
 
-        # Messanging if the position limits are reached
+        # Messaging if the position limits are reached
         if self.long_position_limit_exceeded():
             logger.info("Long delta limit exceeded")
             logger.info("Current Position: %.f, Maximum Position: %.f" %
