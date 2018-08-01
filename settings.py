@@ -120,13 +120,14 @@ WATCHED_FILES = [join('market_maker', 'market_maker.py'), join('market_maker', '
 # Specify the contracts that you hold. These will be used in portfolio calculations.
 CONTRACTS = ['XBTUSD']
 
+
 ###############################################################################
 # Coindex settings
 ###############################################################################
 
 # Aggression setting should be one of the BitMex supported time frequencies:
 # [1m,5m,1h,1d]
-AGGRO = "5m"
+AGGRO = "1m"
 
 # Bias sets the bot to play the short or long market. Options [Short,Long]
 BIAS = "Long"
@@ -135,3 +136,7 @@ BIAS = "Long"
 FMA_PERIODS = 20
 MMA_PERIODS = 50
 TMA_PERIODS = 200
+
+# Minimum ROE we will tolerate
+# 0.01 == 1%
+MIN_ROE = -0.05

@@ -369,7 +369,7 @@ class OrderManager:
 
         logger.info("Current XBT Balance: %.6f" % XBt_to_XBT(self.start_XBt))
         logger.info("Current Contract Position: %d" % self.running_qty)
-        logger.info("Current Potential ROE: %f%" % self.potential_roe())
+        logger.info("Current Potential ROE: %.2f%%" % self.potential_roe())
         if settings.CHECK_POSITION_LIMITS:
             logger.info("Position limits: %d/%d" % (settings.MIN_POSITION, settings.MAX_POSITION))
         if position['currentQty'] != 0:
@@ -582,6 +582,13 @@ class OrderManager:
     ###
     # Position Limits
     ###
+
+    def potential_roe(self):
+        "Returns the potential return on equity of open positions"
+        position = self.exchange.get_position()
+        roe = position['unrealisedRoePcnt'] * 100.0
+        # roe = (open position / current market price) * leverage
+        return roe
 
     def short_position_limit_exceeded(self):
         "Returns True if the short position limit is exceeded"
