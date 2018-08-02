@@ -127,7 +127,7 @@ CONTRACTS = ['XBTUSD']
 
 # Aggression setting should be one of the BitMex supported time frequencies:
 # [1m,5m,1h,1d]
-AGGRO = "1m"
+AGGRO = "5m"
 
 # Bias sets the bot to play the short or long market. Options [Short,Long]
 BIAS = "Long"
@@ -139,4 +139,4 @@ TMA_PERIODS = 200
 
 # Minimum ROE we will tolerate
 # 0.01 == 1%
-MIN_ROE = -0.05
+MIN_ROE = -0.10
