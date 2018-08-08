@@ -29,13 +29,13 @@ SYMBOL = "XBTUSD"
 ########################################################################################################################
 
 # How many pairs of buy/sell orders to keep open
-ORDER_PAIRS = 6
+ORDER_PAIRS = 5
 
 # ORDER_START_SIZE will be the number of contracts submitted on level 1
 # Number of contracts from level 1 to ORDER_PAIRS - 1 will follow the function
 # [ORDER_START_SIZE + ORDER_STEP_SIZE (Level -1)]
-ORDER_START_SIZE = 10
-ORDER_STEP_SIZE = 10
+ORDER_START_SIZE = 300
+ORDER_STEP_SIZE = -30
 
 # Distance between successive orders, as a percentage (example: 0.005 for 0.5%)
 INTERVAL = 0.005
@@ -127,10 +127,10 @@ CONTRACTS = ['XBTUSD']
 
 # Aggression setting should be one of the BitMex supported time frequencies:
 # [1m,5m,1h,1d]
-AGGRO = "5m"
+AGGRO = "1m"
 
 # Bias sets the bot to play the short or long market. Options [Short,Long]
-BIAS = "Long"
+BIAS = "Short"
 
 # The number of periods to use for fast, medium, and trailing moving averages.
 FMA_PERIODS = 20
