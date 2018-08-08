@@ -1,11 +1,9 @@
 # TODO
 
 ## Bot code base
-* Calculate return on equity for open position and install safety nets for exiting at certain percentages
+* [Reconfigure order pattern to more heavily favor the price indicated by analysis](#1)
 * Update a graph per iteration run showing the data it's using for analysis
-* Analyze past orders to show profitability
-* Persist settings so not dependent on config files
-* Web admin site for changing bot settings and viewing progress
+* Persist settings to database so not dependent on config files
 
 ## DevOps
 * Deploy bot to cloud compute instances
