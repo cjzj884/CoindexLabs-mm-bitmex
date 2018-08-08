@@ -21,7 +21,7 @@ API_SECRET = "U7Fov3QgveSGIEAlyP1q7aek1AAb3J0O-iPXl6enrb_84DQ3"
 ########################################################################################################################
 
 # Instrument to market make on BitMEX.
-SYMBOL = "XBTUSD"
+SYMBOL = "XBTZ18"
 
 
 ########################################################################################################################
@@ -29,13 +29,13 @@ SYMBOL = "XBTUSD"
 ########################################################################################################################
 
 # How many pairs of buy/sell orders to keep open
-ORDER_PAIRS = 6
+ORDER_PAIRS = 5
 
 # ORDER_START_SIZE will be the number of contracts submitted on level 1
 # Number of contracts from level 1 to ORDER_PAIRS - 1 will follow the function
 # [ORDER_START_SIZE + ORDER_STEP_SIZE (Level -1)]
-ORDER_START_SIZE = 10
-ORDER_STEP_SIZE = 10
+ORDER_START_SIZE = 300
+ORDER_STEP_SIZE = -30
 
 # Distance between successive orders, as a percentage (example: 0.005 for 0.5%)
 INTERVAL = 0.005
@@ -139,4 +139,4 @@ TMA_PERIODS = 200
 
 # Minimum ROE we will tolerate
 # 0.01 == 1%
-MIN_ROE = -0.05
+MIN_ROE = -0.30
