@@ -10,8 +10,8 @@
 * Multi-bot deploy where bots can be started and stopped via database control
 
 ## High-Level Roadmap
-* [Roadmap Documentation](https://docs.google.com/document/d/1B2ExBDF5tEURjI19bCUmllr8HaYMCWlNhBi7Y1iX_u8/edit?usp=sharing)
-* 0.0 - Alpha (Current)
+[Roadmap Documentation](https://docs.google.com/document/d/1B2ExBDF5tEURjI19bCUmllr8HaYMCWlNhBi7Y1iX_u8/edit?usp=sharing)
+### 0.0 - Alpha (Current)
 * 0.1 ROE trigger functionality
    * RoE or Return on Equity is a calculated as: 
       * % nominal profit of the margin applied to a given position. It represents a function of position leverage and position PnL.
@@ -60,24 +60,28 @@
          * RSI moves upward after Z or more periods trending downward
             * Trigger = exit short position
             * Trigger = buy order for 2% available balance at 25x leverage
-    * 0.4 VWAP calculations and trigger functionality 
-    * 0.5 OBV calculations and trigger functionality 
-    * 0.6 Ichimoku calculations and trigger functionality
-    * 0.7 Multiple trigger toggling
-    * 0.8 DevOps migration to AWS 
-    * 0.9 Security infrastructure
-* 1.0 - Beta (Year Goal)
-    * Multiple strategy management
-    * Front end interface integration
-    * Licensing and access
-    * Account creation and management
-    * Strategy templating
-* 2.0 - Mu (Future State)
-    * Deribit Integration
-    * 1Broker Integration (+1Fox Integration)
-    * Bittrex Integration
-    * Binance Integration
-    * Multi-coin analysis
-    * Multi-coin cross comparison
-    * Multi-coin strategy management
+* 0.4 VWAP calculations and trigger functionality 
+* 0.5 OBV calculations and trigger functionality 
+* 0.6 Ichimoku calculations and trigger functionality
+* 0.7 Multiple trigger toggling
+* 0.8 DevOps migration to AWS 
+* 0.9 Security infrastructure
+
+### 1.0 - Beta (Year Goal)
+* 1.1 Multiple strategy management
+* 1.2 Front end interface integration
+* 1.3 Licensing and access
+* 1.4 Account creation and management
+* 1.5 Strategy templating
+
+### 2.0 - Mu (Future State)
+* 2.1 Deribit Integration
+* 2.2 1Broker Integration (+1Fox Integration)
+* 2.3 Bittrex Integration
+* 2.4 Binance Integration
+* 2.5 Multi-coin analysis
+* 2.6 Multi-coin cross comparison
+* 2.7 Multi-coin strategy management
+* 2.8 Strategy comparison analysis
+* 2.9 Strategy learning module
     
