@@ -51,15 +51,15 @@
          * Average Loss = [(previous Average Loss) x 13 + current Loss] / 14
       * Triggers for RSI will typically be based on limits or reversals
          * RSI rises above the upper limit = overbought bias, sell trade 
-            * RSI > X = sell order for 2% available margin balance at 5x leverage (X = 70 default) 
+                * RSI > X = sell order for 2% available margin balance at 5x leverage (X = 70 default) 
          * RSI falls below the lower limit = oversold bias, buy trade
-            * RSI < Y = buy order for 2% available margin balance at 5x leverage (Y = 30 default)
+                * RSI < Y = buy order for 2% available margin balance at 5x leverage (Y = 30 default)
          * RSI moves downward after Z or more periods trending upward
-            * Trigger = exit long position
-            * Trigger = sell order for 2% available balance at 25x leverage
+                * Trigger = exit long position
+                * Trigger = sell order for 2% available balance at 25x leverage
          * RSI moves upward after Z or more periods trending downward
-            * Trigger = exit short position
-            * Trigger = buy order for 2% available balance at 25x leverage
+                * Trigger = exit short position
+                * Trigger = buy order for 2% available balance at 25x leverage
 * 0.4 VWAP calculations and trigger functionality 
 * 0.5 OBV calculations and trigger functionality 
 * 0.6 Ichimoku calculations and trigger functionality
