@@ -19,8 +19,6 @@
       * IE: RoE > or < X amount = trigger
          * RoE > 40% = take profit trade 
          * Roe < -10% = stop loss trade
-
-
 * 0.2 MACD calculations and trigger functionality
    * MACD or Moving Average Convergence Divergence is calculated as: 
       * X = 12-period EMA of price
@@ -41,8 +39,6 @@
       * Dramatic fall downward = oversold, dramatic reversal incoming
          * B - A > F = exit short position
          * B - A > F = buy order for 2% available balance at 25x leverage
-
-
 * 0.3 RSI calculations and trigger functionality 
    * RSI or Relative Strength Index is calculated as:
       *  RSI = 100 - (100 / (1 + RS))
@@ -64,24 +60,24 @@
          * RSI moves upward after Z or more periods trending downward
             * Trigger = exit short position
             * Trigger = buy order for 2% available balance at 25x leverage
-* 0.4 VWAP calculations and trigger functionality 
-* 0.5 OBV calculations and trigger functionality 
-* 0.6 Ichimoku calculations and trigger functionality
-* 0.7 Multiple trigger toggling
-* 0.8 DevOps migration to AWS 
-* 0.9 Security infrastructure
-1.0 - Beta (Year Goal)
-* Multiple strategy management
-* Front end interface integration
-* Licensing and access
-* Account creation and management
-* Strategy templating
-2.0 - Mu (Future State)
-* Deribit Integration
-* 1Broker Integration (+1Fox Integration)
-* Bittrex Integration
-* Binance Integration
-* Multi-coin analysis
-* Multi-coin cross comparison
-* Multi-coin strategy management
-
+    * 0.4 VWAP calculations and trigger functionality 
+    * 0.5 OBV calculations and trigger functionality 
+    * 0.6 Ichimoku calculations and trigger functionality
+    * 0.7 Multiple trigger toggling
+    * 0.8 DevOps migration to AWS 
+    * 0.9 Security infrastructure
+* 1.0 - Beta (Year Goal)
+    * Multiple strategy management
+    * Front end interface integration
+    * Licensing and access
+    * Account creation and management
+    * Strategy templating
+* 2.0 - Mu (Future State)
+    * Deribit Integration
+    * 1Broker Integration (+1Fox Integration)
+    * Bittrex Integration
+    * Binance Integration
+    * Multi-coin analysis
+    * Multi-coin cross comparison
+    * Multi-coin strategy management
+    
